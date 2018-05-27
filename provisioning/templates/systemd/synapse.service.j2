@@ -1,0 +1,16 @@
+[Unit]
+Description=Synapse Matrix Homeserver
+After=network.target
+After=syslog.target
+
+[Service]
+Type=simple
+User={{ remote_user }}
+Group={{ remote_user }}
+WorkingDirectory={{ synapse_path }}
+ExecStart={{ synapse_path }}/bin/python -B -m synapse.app.homeserver -c homeserver.yaml
+Restart=on-failure
+Environment=USER={{ remote_user }} HOME=/home/{{ remote_user }}
+
+[Install]
+WantedBy=multi-user.target

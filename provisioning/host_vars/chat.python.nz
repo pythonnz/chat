@@ -1,0 +1,13 @@
+remote_user: ubuntu
+home: /home/ubuntu
+
+synapse_path: "{{ home }}/synapse"
+synapse_config_path: "{{ synapse_path }}/homeserver.yaml"
+logo_path: /data/_matrix/client/img
+
+images:
+  - favicon.ico
+  - img/logo.png
+  - img/logo-small.png
+
+volume_device: /dev/vdb  # As per the value in Terraform

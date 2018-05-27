@@ -1,0 +1,140 @@
+---
+
+- name: Provision chat.python.nz with Synapse
+  hosts:
+    - chat.python.nz
+  gather_facts: no
+  remote_user: "{{ remote_user }}"
+
+  pre_tasks:
+    - name: Update apt repository
+      raw: sudo apt-get update
+
+    - name: Install python2 for Ansible
+      raw: sudo apt-get install -y python
+
+  tasks:
+    - name: Install system packages
+      become: yes
+      apt:
+        name: "{{ item }}"
+        update_cache: yes
+      with_items:
+        - build-essential
+        - libffi-dev
+        - libjpeg-dev
+        - libssl-dev
+        - libxslt1-dev
+        - nginx
+        - python-certbot-nginx
+        - python-pip
+        - python-setuptools
+        - python-virtualenv
+        - python2.7-dev
+        - software-properties-common
+        - sqlite3
+
+    - name: Create Synapse directory
+      file:
+        path: "{{ synapse_path }}"
+        state: directory
+        mode: 0755
+
+    - name: Format data volume
+      become: yes
+      filesystem:
+        fstype: ext4
+        dev: "{{ volume_device }}"
+
+    - name: Mount data folder
+      become: yes
+      mount:
+        src: "{{ volume_device }}"
+        path: "{{ synapse_path }}"
+        fstype: ext4
+        state: mounted
+        boot: yes
+
+    - name: Ensure correct premissions on Synapse directory
+      become: yes
+      file:
+        path: "{{ synapse_path }}"
+        state: directory
+        owner: "{{ remote_user }}"
+        group: "{{ remote_user }}"
+        recurse: yes
+
+    - name: Install requirements
+      pip:
+        name: "{{ item }}"
+        state: latest
+        virtualenv: "{{ synapse_path }}"
+      with_items:
+        - pip
+        - setuptools
+        - https://github.com/matrix-org/synapse/tarball/master
+
+    - name: Register if homeserver config exists
+      stat:
+        path: "{{ synapse_config_path }}"
+      register: synapse_config
+
+    - name: Generate homeserver.yaml config file
+      shell: "{{ synapse_path }}/bin/python -m synapse.app.homeserver --server-name {{ ansible_host }} --config-path homeserver.yaml --generate-config --report-stats=yes"
+      args:
+        chdir: "{{ synapse_path }}"
+        creates: "{{ synapse_config_path }}"
+      when: synapse_config.stat.exists == false
+
+    - name: Create Synapse homeserver config
+      template:
+        src: synapse/homeserver.yaml
+        dest: "{{ synapse_config_path }}"
+
+    - name: Install systemd conf
+      become: yes
+      template:
+          src: systemd/synapse.service.j2
+          dest: /etc/systemd/system/synapse.service
+          mode: 0644
+
+    - name: Create static directories
+      become: yes
+      file:
+        path: "{{ logo_path }}"
+        state: directory
+        owner: "{{ remote_user }}"
+        group: "www-data"
+        recurse: yes
+
+    - name: Copy logo images
+      copy:
+        src: "{{ item }}"
+        dest: "/data/_matrix/client/{{ item }}"
+      with_items: "{{ images }}"
+
+    - name: Create Nginx config
+      become: yes
+      template:
+        src: nginx/nginx.j2
+        dest: /etc/nginx/nginx.conf
+
+    - name: Reloading Daemons
+      become: yes
+      command: systemctl daemon-reload
+
+    - name: Enabling service
+      become: yes
+      command: systemctl enable synapse
+
+    - name: Start synapse server
+      become: yes
+      service:
+        name: synapse
+        state: started
+
+    - name: Restart Nginx
+      become: yes
+      service:
+        name: nginx
+        state: reloaded
