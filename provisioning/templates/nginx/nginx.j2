@@ -30,8 +30,12 @@ http {
             proxy_set_header X-Forwarded-For $remote_addr;
         }
 
-        location /_matrix/client/img/ {
-            root /data;
+        location /_matrix/client/img/logo.png {
+            alias /data/_matrix/client/img/logo.png;
+        }
+
+        location /_matrix/client/img/logo-small.png {
+            alias /data/_matrix/client/img/logo-small.png;
         }
 
         location /_matrix/client/favicon.ico {
