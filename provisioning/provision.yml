@@ -14,6 +14,9 @@
       raw: sudo apt-get install -y python
 
   tasks:
+    #########################
+    # System Configuration
+    #########################
     - name: Install system packages
       become: yes
       apt:
@@ -34,6 +37,9 @@
         - software-properties-common
         - sqlite3
 
+    #########################
+    # Synapse Configuration
+    #########################
     - name: Create Synapse directory
       file:
         path: "{{ synapse_path }}"
@@ -72,7 +78,7 @@
       with_items:
         - pip
         - setuptools
-        - https://github.com/matrix-org/synapse/tarball/master
+        - "{{ synapse_release }}"
 
     - name: Register if homeserver config exists
       stat:
@@ -98,32 +104,51 @@
           dest: /etc/systemd/system/synapse.service
           mode: 0644
 
-    - name: Create static directories
+    #########################
+    # Riot Configuration
+    #########################
+    - name: Download Riot release archive
+      get_url:
+        url: "{{ riot_release }}"
+        dest: "{{ riot_path }}.tar.gz"
+
+    - name: Extract Riot release archive
+      unarchive:
+        src: "{{ riot_path }}.tar.gz"
+        dest: "{{ home }}"
+        remote_src: yes
+        list_files: yes
+      register: riot_archive
+
+    - name: Symlink Riot src for Nginx
       become: yes
       file:
-        path: "{{ logo_path }}"
-        state: directory
-        owner: "{{ remote_user }}"
-        group: "www-data"
-        recurse: yes
+        src: "{{ home }}/{{ riot_archive.files[0] }}"
+        dest: /usr/share/nginx/html
+        state: link
 
-    - name: Copy logo images
-      copy:
-        src: "{{ item }}"
-        dest: "/data/_matrix/client/{{ item }}"
-      with_items: "{{ images }}"
+    - name: Configure Riot
+      template:
+        src: riot/config.j2
+        dest: "{{ home }}/{{ riot_archive.files[0] }}/config.json"
 
-    - name: Create Nginx config
+    #########################
+    # Nginx configuration
+    #########################
+    - name: Configure Nginx
       become: yes
       template:
         src: nginx/nginx.j2
         dest: /etc/nginx/nginx.conf
 
+    #########################
+    # Load and start services
+    #########################
     - name: Reloading Daemons
       become: yes
       command: systemctl daemon-reload
 
-    - name: Enabling service
+    - name: Enabling Synapse service
       become: yes
       command: systemctl enable synapse
 

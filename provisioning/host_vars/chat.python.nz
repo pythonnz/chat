@@ -3,8 +3,13 @@ home: /home/ubuntu
 
 synapse_path: "{{ home }}/synapse"
 synapse_config_path: "{{ synapse_path }}/homeserver.yaml"
-logo_path: /data/_matrix/client/img
+synapse_release: https://github.com/matrix-org/synapse/tarball/master
 
+riot_path: "{{ home }}/riot"
+riot_version: v0.15.5
+riot_release: "https://github.com/vector-im/riot-web/releases/download/{{ riot_version }}/riot-{{ riot_version }}.tar.gz"
+
+logo_path: /data/_matrix/client/img
 images:
   - favicon.ico
   - img/logo.png

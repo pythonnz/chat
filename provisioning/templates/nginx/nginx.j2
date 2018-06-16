@@ -20,6 +20,20 @@ http {
     server {
         listen 443 ssl;
         listen [::]:443 ssl;
+        server_name  {{ ansible_ssh_host }};
+
+        ssl_certificate /etc/letsencrypt/live/{{ ansible_host }}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{{ ansible_host }}/privkey.pem;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+    }
+
+    server {
+        listen 8080 ssl;
+        listen [::]:8080 ssl;
         server_name {{ ansible_ssh_host }};
 
         ssl_certificate /etc/letsencrypt/live/{{ ansible_host }}/fullchain.pem;
@@ -28,18 +42,6 @@ http {
         location / {
             proxy_pass http://localhost:8008;
             proxy_set_header X-Forwarded-For $remote_addr;
-        }
-
-        location /_matrix/client/img/logo.png {
-            alias /data/_matrix/client/img/logo.png;
-        }
-
-        location /_matrix/client/img/logo-small.png {
-            alias /data/_matrix/client/img/logo-small.png;
-        }
-
-        location /_matrix/client/favicon.ico {
-            alias /data/_matrix/client/favicon.ico;
         }
     }
 }

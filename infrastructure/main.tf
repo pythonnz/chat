@@ -74,6 +74,7 @@ resource "openstack_networking_secgroup_v2" "synapse_homeserver" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "http" {
+  # Riot webclient
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
@@ -84,6 +85,7 @@ resource "openstack_networking_secgroup_rule_v2" "http" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "https" {
+  # Riot webclient
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
@@ -94,11 +96,23 @@ resource "openstack_networking_secgroup_rule_v2" "https" {
 }
 
 resource "openstack_networking_secgroup_rule_v2" "synapse_federation" {
+  # Matrix federation
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "tcp"
   port_range_min    = 8448
   port_range_max    = 8448
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = "${openstack_networking_secgroup_v2.synapse_homeserver.id}"
+}
+
+resource "openstack_networking_secgroup_rule_v2" "synapse_homeserver" {
+  # Matrix homeserver
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 8080
+  port_range_max    = 8080
   remote_ip_prefix  = "0.0.0.0/0"
   security_group_id = "${openstack_networking_secgroup_v2.synapse_homeserver.id}"
 }
